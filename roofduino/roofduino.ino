@@ -3,12 +3,21 @@
 
 // Button debounce library
 #include <Bounce2.h>
-const int buttonUpPin = 5;
-const int buttonDnPin = 6;
-Bounce debouncer1 = Bounce(); 
-Bounce debouncer2 = Bounce(); 
+const int buttonUpPin = 28;
+const int buttonDownPin = 29;
+const int buttonLeftPin = 30;
+const int buttonRightPin = 31;
+const int buttonSelectPin = 32;
+Bounce debouncerUp = Bounce(); 
+Bounce debouncerDown = Bounce(); 
+Bounce debouncerLeft = Bounce(); 
+Bounce debouncerRight = Bounce(); 
+Bounce debouncerSelect = Bounce(); 
 int buttonUp = HIGH; // State of buttonUp.  LOW is activated.
-int buttonDn = HIGH; // State of buttonDn.  LOW is activated.
+int buttonDown = HIGH;
+int buttonLeft = HIGH;
+int buttonRight = HIGH;
+int buttonSelect = HIGH;
 
 
 // HC-SR04 ultrasonic rangefinder  returns the distance to the
@@ -17,7 +26,7 @@ int buttonDn = HIGH; // State of buttonDn.  LOW is activated.
 // return.  The length of the returning pulse is proportional to 
 // the distance of the object from the sensor.
 const int trigPin = 2;
-const int echoPin = 4;
+const int echoPin = 4; // needs to be on a pin that supports interrupts?
 long cm = 0;  // Ultrasound rangefinder distance [cm]
 
 
@@ -29,10 +38,10 @@ float adcVals[16];  // Smoothed ADC values (10 bit ADC)
 
 
 // IR proximity sensor pins
-const int irFrontRightPin = 10;
-const int irFrontLeftPin = 11;
-const int irBackRightPin = 12;
-const int irBackLeftPin = 13;
+const int irFrontRightPin = 33;
+const int irFrontLeftPin = 34;
+const int irBackRightPin = 35;
+const int irBackLeftPin = 36;
 // ... and their associated values
 boolean irFrontRight = LOW;
 boolean irFrontLeft = LOW;
@@ -41,13 +50,45 @@ boolean irBackLeft = LOW;
 
 
 // Motor encoders
-// Digitial pins usable for interrupts: 2, 3, 18, 19, 20, 21
-const int encLeftPin = 20;
-const int encRighPin = 21;
+const int encLeftPin = 20;  // Only some pins can be used for interrupts
+const int encRighPin = 21;  // Another interrupt pin
 boolean leftMotorForward = true;  // true=forward, false=backward
 boolean rightMotorForward = true; // true=forward, false=backward
 long leftMotorCounter = 0;
 long rightMotorCounter = 0;
+long leftMotorCounterSnapshot = 0;
+long rightMotorCounterSnapshot = 0;
+long L = 0;  // = |rightMotorCounter - rightMotorCounterSnapshot|
+boolean homeward_bound = false;
+boolean at_home = true;
+
+// Motor pins
+const int leftMotorForwardPin = 37;
+const int leftMotorBackwardPin = 38;
+const int rightMotorForwardPin = 39;
+const int rightMotorBackwardPin = 40;
+
+
+// LCD
+#include <LiquidCrystal.h>
+// LCD RS pin to digital pin 22
+// LCD Enable pin to digital pin 23
+// LCD D4 pin to digital pin 24
+// LCD D5 pin to digital pin 25
+// LCD D6 pin to digital pin 26
+// LCD D7 pin to digital pin 27
+LiquidCrystal lcd(22, 23, 24, 25, 26, 27);
+
+
+// SD card
+// * SD card attached to SPI bus as follows:
+// ** MOSI - pin 51
+// ** MISO - pin 50
+// ** CLK - pin 52
+// ** CS - pin 53
+#include <SPI.h>
+#include <SD.h>
+const int chipSelesctPin = 53;
 
 
 // The state machine library downloaded from
@@ -57,75 +98,42 @@ long rightMotorCounter = 0;
 // Sketch -> Include Library -> Add .ZIP library
 #include <SM.h>
 // Define machines and then states for those machines
-// Machine 1: LCD display and push buttons.  Master controller
-//   State 1: select program
-//   State 2: count down, 1..2..3..Go!
-//   State 3: display running status.  Also check values to update motion
-//   State 4: configuration -- set measurement averaging, speed
+// Machine 1: LCD display and push buttons.
 // Machine 2: Motion control
-//   State 1: Stopped
-//   State 1: Forward
-//   State 2: Reverse
-//   State 3: Turn right
-//   State 4: Turn left
-//   State 5: Avoid front obstacle (usually detected by ultrasonic ranger)
-//   State 6: Avoid front-right obstacle (IR proximity detector)
-//   State 7: Avoid front-left obstacle (IR proximity detector)
-//   State 8: Avoid back-right obstacle (IR proximity detector)
-//   State 9: Avoid back-left obstacle (IR proximity detector)
-//   State 10: Return home
-//   State 11: Goto next column (e.g., back left, up, down)
-
-
-// Machine 3: Height measurement, 16 optical range finders
-//   State 1: Idle
-//   State 2: Grab data
-//   State 3: Save to SD card
-// Machine 4: Ultrasonic range finder
-//   State 1: Idle
-//   State 2: Grab data
-//   State 3: Close
-//   State 4: Far
-// Machine 5: Obstacle avoidance sensors
-//   State 1: No obstacles
-//   State 2: Obstacle in front
-//   State 3: No roof, front right
-//   State 4: No roof, front left
-//   State 5: No roof, back right
-//   State 6: No roof, back left
-//
-// Events:
-// Ultrasonic ranger
-//   range < 10 cm, range > 10 cm
-// IR proximity sensor
-//   front-left, front-right, back-right, back-left
-// Button press
-//   up, dn, left, right, enter 
 SM m1(m1s1h, m1s1b);//machine1
 SM m2(m2s1h, m2s1b);//machine2
-SM m3(m3s1h, m3s1b);//machine3
-SM Blink(On);//machine to blink led continously
 
-
-#define SOME_PIN 15
 
 void setup() {
   // Open serial communications
   Serial.begin(115200);
   Serial.println("Starting roodfduino...")
   
-  // Setup the first button with an internal pull-up :
-  pinMode(BUTTON_PIN_1,INPUT_PULLUP);
-  // After setting up the button, setup the Bounce instance :
-  debouncer1.attach(buttonUpPin);
-  debouncer1.interval(5); // interval in ms
+  // Setup the first button with an internal pull-up
+  pinMode(buttonUpPin, INPUT_PULLUP);
+  debouncerUp.attach(buttonUpPin);
+  debouncerUp.interval(5); // interval in ms
   
-   // Setup the second button with an internal pull-up :
-  pinMode(BUTTON_PIN_2,INPUT_PULLUP);
-  // After setting up the button, setup the Bounce instance :
-  debouncer2.attach(buttonDnPin);
-  debouncer2.interval(5); // interval in ms
+  // Setup the second button with an internal pull-up
+  pinMode(buttonDownPin, INPUT_PULLUP);
+  debouncerDown.attach(buttonDownPin);
+  debouncerDown.interval(5); // interval in ms
 
+  // Setup the third button with an internal pull-up
+  pinMode(buttonLeftPin, INPUT_PULLUP);
+  debouncerLeft.attach(buttonLeftPin);
+  debouncerLeft.interval(5); // interval in ms
+
+  // Setup the fourth button with an internal pull-up
+  pinMode(buttonRightPin, INPUT_PULLUP);
+  debouncerRight.attach(buttonRightPin);
+  debouncerRight.interval(5); // interval in ms
+
+  // Setup the fifth button with an internal pull-up
+  pinMode(buttonSelectPin, INPUT_PULLUP);
+  debouncerSelect.attach(buttonSelectPin);
+  debouncerSelect.interval(5); // interval in ms
+  
   // Setup IR proximity pins
   pinMode(irFrontRightPin, INPUT);
   pinMode(irFrontLeftPin, INPUT);
@@ -137,21 +145,42 @@ void setup() {
                   RISING);
   attachInterrupt(digitalPinToInterrupt(encRightPin), isr_enc_right, 
                   RISING);
+
+  // Motors off
+  pinMode(leftMotorForwardPin, OUTPUT);
+  pinMode(leftMotorBackwardPin, OUTPUT);
+  pinMode(rightMotorForwardPin, OUTPUT);
+  pinMode(rightMotorBackwardPin, OUTPUT);
+  digitalWrite(leftMotorForwardPin, LOW);
+  digitalWrite(leftMotorBackwardPin, LOW);
+  digitalWrite(rightMotorForwardPin, LOW);
+  digitalWrite(rightMotorBackwardPin, LOW);
+
+  // Setup liquid crystal
+  lcd.begin(16,2);
+  lcd.print("hello, world!");   
+
+  // Setup SD card
+  Serial.print("Initializing SD card...");
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelectPin)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  Serial.println("card initialized.");
+
 }
 
 void loop() {
 
   get_sensors();             // Read all sensors, like proximity, etc...
-  EXEC(m1);                  // Execute the State Machine
-  provide_feedback();        // Send status updates via Serial
-  get_serial();              // Grab commands from Serial 
+  EXEC(m1);                  // Execute the State Machine: LCD
+  EXEC(m2);                  // Motion  
+  //provide_feedback();        // Send status updates via Serial
+  //get_serial();              // Grab commands from Serial 
 
 }
-
-// Event variables
-// Event variables are read by each state function to determine
-// whether to transition to another state.
-boolean obstacle_front = false;
 
 
 // Read all sensor values and update event variables
@@ -159,11 +188,17 @@ void get_sensors()
 {
   // Get pushbutton values
   // Update the Bounce instances:
-  debouncer1.update();
-  debouncer2.update();
+  debouncerUp.update();
+  debouncerDown.update();
+  debouncerLeft.update();
+  debouncerRight.update();
+  debouncerSelect.update();
   // Get the updated value:
-  buttonUp = debouncer1.read(); // buttonUp == LOW when button pressed
-  buttonDn = debouncer2.read(); // buttonDn == LOW when button pressed
+  buttonUp = debouncerUp.read(); // buttonUp == LOW when button pressed
+  buttonDown = debouncerDown.read();
+  buttonLeft = debouncerLeft.read();
+  buttonRight = debouncerRight.read();
+  buttonSelect = debouncerSelect.read();
   
   // Get ultrasonic ranger values
   cm = get_ultrasound();
@@ -173,10 +208,10 @@ void get_sensors()
   Serial.println();
   // todo
   // Interpret ultrasonic ranger results
-  if (val < 10 cm)
-    obstacle_front = true;
-  else
-    obstacle_front = false;
+  // if (val < 10 cm)
+  //   obstacle_front = true;
+  // else
+  //   obstacle_front = false;
 
   // Get IR proximity sensor values
   irFrontRight = digitalRead(irFrontRightPin);
