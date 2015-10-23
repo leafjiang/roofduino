@@ -51,7 +51,7 @@ boolean irBackLeft = LOW;
 
 // Motor encoders
 const int encLeftPin = 20;  // Only some pins can be used for interrupts
-const int encRighPin = 21;  // Another interrupt pin
+const int encRightPin = 21;  // Another interrupt pin
 boolean leftMotorForward = true;  // true=forward, false=backward
 boolean rightMotorForward = true; // true=forward, false=backward
 long leftMotorCounter = 0;
@@ -88,7 +88,7 @@ LiquidCrystal lcd(22, 23, 24, 25, 26, 27);
 // ** CS - pin 53
 #include <SPI.h>
 #include <SD.h>
-const int chipSelesctPin = 53;
+const int chipSelectPin = 53;
 
 
 // The state machine library downloaded from
@@ -100,6 +100,37 @@ const int chipSelesctPin = 53;
 // Define machines and then states for those machines
 // Machine 1: LCD display and push buttons.
 // Machine 2: Motion control
+
+State m1s1h();
+State m1s1b();
+State m1s2h();
+State m1s2b();
+State m1s3h();
+State m1s3b();
+State m1s4h();
+State m1s4b();
+State m1s5h();
+State m1s5b();
+State m1s6h();
+State m1s6b();
+State m1s7h();
+State m1s7b();
+
+State m2s1h();
+State m2s1b();
+State m2s2h();
+State m2s2b();
+State m2s3h();
+State m2s3b();
+State m2s4h();
+State m2s4b();
+State m2s5h();
+State m2s5b();
+State m2s6h();
+State m2s6b();
+State m2s7h();
+State m2s7b();
+
 SM m1(m1s1h, m1s1b);//machine1
 SM m2(m2s1h, m2s1b);//machine2
 
@@ -107,7 +138,7 @@ SM m2(m2s1h, m2s1b);//machine2
 void setup() {
   // Open serial communications
   Serial.begin(115200);
-  Serial.println("Starting roodfduino...")
+  Serial.println("Starting roodfduino...");
   
   // Setup the first button with an internal pull-up
   pinMode(buttonUpPin, INPUT_PULLUP);

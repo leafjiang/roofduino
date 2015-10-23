@@ -3,7 +3,7 @@
 // the more the readings will be smoothed, but the slower the output will
 // respond to the input.  Using a constant rather than a normal variable lets
 // use this value to determine the size of the readings array.
-const int numReadings = 10;
+const int numReadings = 1000;
 
 int readings[numReadings];      // the readings from the analog input
 int index = 0;                  // the index of the current reading
@@ -27,7 +27,7 @@ void loop()
   index++;
   counter = max(counter, index);
   if (index >= numReadings) index = 0;
-  average = float(total) / counter;         
+  average = float(total) / float(counter);         
 
   //if (average> 400 || average< 300)
   //    Serial.println(average); 

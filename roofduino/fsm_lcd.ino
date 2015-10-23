@@ -103,7 +103,7 @@ State m1s4h()
 
 State m1s4b()
 {
-  if (m1.Timeout(2000)) m1.Set(m1s6h, m1s6bd);
+  if (m1.Timeout(2000)) m1.Set(m1s6h, m1s6b);
   else if (m1.Timeout(1500)) lcd.print("Go!");
   else if (m1.Timeout(1000)) lcd.print("1.. ");
   else if (m1.Timeout(500)) lcd.print("2.. ");
@@ -185,7 +185,7 @@ void saveData()
   }
   // second, write encoder values 
   dataString += String(leftMotorCounter);
-  dataString += ","
+  dataString += ",";
   dataString += String(rightMotorCounter);
 
   // open the file. note that only one file can be open at a time,
@@ -205,7 +205,7 @@ void saveData()
   }
 }
 
-void updataLcd()
+void updateLcd()
 {
   lcd.clear();
   lcd.setCursor(0, 0);

@@ -21,7 +21,6 @@ detected by satisfying one of the following two conditions:
    robot indicate no roof present.
 */
 
-
 void stop_motors()
 {
   digitalWrite(leftMotorForwardPin, LOW);
@@ -154,10 +153,10 @@ State m2s2b()
   // Balance encoder counts.
   // Check encoder counts.  If not even, change power to
   // left and right motors
-  left_diff = leftMotorCounter - leftMotorCounterSnapshot;
-  right_diff = rightMotorCounter - rightMotorCounterSnapshot;
+  long left_diff = leftMotorCounter - leftMotorCounterSnapshot;
+  long right_diff = rightMotorCounter - rightMotorCounterSnapshot;
   L = abs(right_diff);
-  d = right_diff - left_diff
+  long d = right_diff - left_diff;
   if (d > 1) {
     // Left motor needs to catch up
     // Left on, right off
@@ -177,7 +176,7 @@ State m2s2b()
     digitalWrite(leftMotorForwardPin, HIGH);
     digitalWrite(leftMotorBackwardPin, LOW);
     digitalWrite(rightMotorForwardPin, HIGH);
-    digitalWrite(rightMotorBackwardPin, LOW);    }
+    digitalWrite(rightMotorBackwardPin, LOW);
   }
 
   if (homeward_bound) {
@@ -220,10 +219,10 @@ State m2s3b()
   // Balance encoder counts.
   // Check encoder counts.  If not even, change power to
   // left and right motors
-  left_diff = leftMotorCounter - leftMotorCounterSnapshot;
-  right_diff = rightMotorCounter - rightMotorCounterSnapshot;
+  long left_diff = leftMotorCounter - leftMotorCounterSnapshot;
+  long right_diff = rightMotorCounter - rightMotorCounterSnapshot;
   L = abs(right_diff);
-  d = right_diff - left_diff
+  long d = right_diff - left_diff;
   if (d > 1) {
     // Left motor needs to catch up
     // Left on, right off
@@ -243,7 +242,7 @@ State m2s3b()
     digitalWrite(leftMotorForwardPin, LOW);
     digitalWrite(leftMotorBackwardPin, HIGH);
     digitalWrite(rightMotorForwardPin, LOW);
-    digitalWrite(rightMotorBackwardPin, HIGH);    }
+    digitalWrite(rightMotorBackwardPin, HIGH);
   }
 
   if (homeward_bound) {
