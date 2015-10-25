@@ -18,7 +18,7 @@ long microsecondsToCentimeters(long microseconds)
   return microseconds / 29 / 2;
 }
 
-long get_ultrasound()
+long get_ultrasound(int trigPin, int echoPin)
 {
   long duration, inches, cm;
 

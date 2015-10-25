@@ -21,6 +21,13 @@ detected by satisfying one of the following two conditions:
    robot indicate no roof present.
 */
 
+String mot_prev_s="";
+void mot_serial_print_once(String s)
+{
+  if (s!=mot_prev_s) Serial.println(s);
+  mot_prev_s = s;
+}
+
 void stop_motors()
 {
   digitalWrite(leftMotorForwardPin, LOW);
@@ -93,13 +100,13 @@ void turn_right()
   digitalWrite(rightMotorBackwardPin, HIGH);  
 }
 
-void are_we_home_yet()
+boolean are_we_home_yet()
 {
   // Are we home yet?
   // We are home if either the length of this column is less than
   // 100 encoder counts, or if the IR proximity sensors on the
   // right side detect no roof.
-  if ( (L < 100 && (!irFrontRight || !irBackRight)) ||
+  if ( ((L < 100) && (!irFrontRight || !irBackRight)) ||
        (!irFrontRight && !irBackRight) ) {
     // Yes, we are home.
     homeward_bound = false;
@@ -109,23 +116,21 @@ void are_we_home_yet()
     // Update LCD display
     m1.Set(m1s1h, m1s1b);
   }
+  return at_home;
 }
 
-void are_we_done_yet()
+boolean are_we_done_yet()
 {
   // Are we done scanning the roof?
   // We are done if either the length of the column is less than
   // 100 encoder counts, or if the IR proximity sensors on the
   // left side detect no roof.
-  if ( (L < 100 && (!irFrontLeft || !irBackLeft)) ||
+  if ( ((L < 100) && (!irFrontLeft || !irBackLeft)) ||
        (!irFrontLeft && !irBackLeft) ) {
     // Yes, we are done.
     homeward_bound = true;
-    // Stop motors
-    // m2.Set(m2s1h, m2s1b);
-    // Update LCD display
-    // m1.Set(m1s1h, m1s1b);
   }
+  return homeward_bound;
 }  
 
 // State 1 --------------------------------------------------------
@@ -133,11 +138,13 @@ void are_we_done_yet()
 
 State m2s1h()
 {
+  Serial.println("m2s1h - stopped");
   stop_motors();
 }
 
 State m2s1b()
 {
+  mot_serial_print_once("m2s1b - stopped");
 }
 
 // State 2 --------------------------------------------------------
@@ -145,11 +152,13 @@ State m2s1b()
 
 State m2s2h()
 {
+  Serial.println("m2s2h - forward");
   move_forward();
 }
 
 State m2s2b()
 {
+  mot_serial_print_once("m2s2b - forward");
   // Balance encoder counts.
   // Check encoder counts.  If not even, change power to
   // left and right motors
@@ -181,17 +190,17 @@ State m2s2b()
 
   if (homeward_bound) {
     // Are we home yet?
-    are_we_home_yet();
+    if (are_we_home_yet()) return;
   } else {
     // Are we done yet?
     are_we_done_yet();
   }
-  
+
   // Move to next column?
   // We move to the next column, if ultrasound range finder 
   // finds an obstruction or if the front IR proximity sensors
   // don't detect a roof.
-  if (cm < 10 || !irFrontRight || !irFrontLeft) {
+  if (frontObstacle || !irFrontRight || !irFrontLeft) {
     // Yes, move to next column
     // Are we going home?
     if (homeward_bound) {
@@ -211,11 +220,13 @@ State m2s2b()
 
 State m2s3h()
 {
+  Serial.println("m2s3h - backward");
   move_backward();
 }
 
 State m2s3b()
 {
+  mot_serial_print_once("m2s3b - backward");
   // Balance encoder counts.
   // Check encoder counts.  If not even, change power to
   // left and right motors
@@ -247,7 +258,7 @@ State m2s3b()
 
   if (homeward_bound) {
     // Are we home yet?
-    are_we_home_yet();
+    if (are_we_home_yet()) return;
   } else {
     // Are we done yet?
     are_we_done_yet();
@@ -278,11 +289,13 @@ State m2s3b()
 
 State m2s4h()
 {
+  Serial.println("m2s4h - back right");
   turn_left();                                // 1. rotate
 }
 
 State m2s4b()
 {
+  mot_serial_print_once("m2s4b - back right");
   if (m1.Timeout(3000)) m2.Set(m2s3h, m2s3b);  // 4. done, go back
   else if (m1.Timeout(2000)) turn_right();     // 3. straighten up
   else if (m1.Timeout(1000)) move_backward();  // 2. go backward
@@ -294,11 +307,13 @@ State m2s4b()
 
 State m2s5h()
 {
+  Serial.println("m2s5h - back left");
   turn_right();                                // 1. rotate
 }
 
 State m2s5b()
 {
+  mot_serial_print_once("m2s5b - back left");
   if (m1.Timeout(3000)) m2.Set(m2s3h, m2s3b);  // 4. done, go back
   else if (m1.Timeout(2000)) turn_left();      // 3. straighten up
   else if (m1.Timeout(1000)) move_backward();  // 2. go backward
@@ -310,11 +325,13 @@ State m2s5b()
 
 State m2s6h()
 {
+  Serial.println("m2s6h - forward right");
   turn_right();                                // 1. rotate
 }
 
 State m2s6b()
 {
+  mot_serial_print_once("m2s6b - forward right");
   if (m1.Timeout(3000)) m2.Set(m2s2h, m2s2b); // 4. done, go forw
   else if (m1.Timeout(2000)) turn_left();     // 3. straighten up
   else if (m1.Timeout(1000)) move_forward();  // 2. go forward
@@ -326,11 +343,13 @@ State m2s6b()
 
 State m2s7h()
 {
+  Serial.println("m2s7h - forward left");
   turn_left();                                // 1. rotate
 }
 
 State m2s7b()
 {
+  mot_serial_print_once("m2s7b - forward left");
   if (m1.Timeout(3000)) m2.Set(m2s2h, m2s2b); // 4. done, go forw
   else if (m1.Timeout(2000)) turn_right();    // 3. straighten up
   else if (m1.Timeout(1000)) move_forward();  // 2. go forward
