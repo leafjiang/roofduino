@@ -86,7 +86,7 @@ const int nextColEncCount = 50; // Number of enocder counts to move forward to n
 boolean returnedHome = false;
 boolean emergencyStop = false;
 // Forward and turning speeds: 0..255
-int forward_speed = 200;
+int forward_speed = 255;
 int turning_speed = 200;
 
 
@@ -202,6 +202,9 @@ State m2s12h(); State m2s12b();
 State m2s13h(); State m2s13b();
 State m2s14h(); State m2s14b();
 State m2s15h(); State m2s15b();
+State m2s20h(); State m2s20b();
+State m2s21h(); State m2s21b();
+State m2s22h(); State m2s22b();
 
 SM m1(m1s1h, m1s1b);//machine1
 SM m2(m2s1h, m2s1b);//machine2
@@ -324,8 +327,8 @@ void loop() {
   //loop_start = millis();
 
   get_sensors();             // Read all sensors, like proximity, etc...
-  //EXEC(m1);                  // Execute the State Machine: LCD
-  //EXEC(m2);                  // Motion  
+  EXEC(m1);                  // Execute the State Machine: LCD
+  EXEC(m2);                  // Motion  
 
   //provide_feedback();        // Send status updates via Serial
   //get_serial();              // Grab commands from Serial 
@@ -608,8 +611,7 @@ void saveData()
   dataString += ",";
   dataString += String(accel_cal);  
   dataString += ",";
-  dataString += String(mag_cal);  
-  dataString += ",";    
+  dataString += String(mag_cal);      
 
 
   // read sensor values and append to the string:

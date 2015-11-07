@@ -238,6 +238,7 @@ State m1s6h()
 State m1s6b()
 {
   lcd_serial_print_once("m1s6b - roof go");
+  
   // Save ADC and encoder data to SD card
   saveData();
   
@@ -275,6 +276,9 @@ State m1s7h()
 State m1s7b()
 {
   lcd_serial_print_once("m1s7b - square go");
+
+  // Save ADC and encoder data to SD card
+  saveData();
   
   // Update LCD display once in a while
   lcdUpdateStatus();
@@ -284,6 +288,11 @@ State m1s7b()
        || buttonRight == LOW || buttonSelect == LOW) {
     m1.Set(m1s9h, m1s9b); // done
   }
+
+  // Move robot
+  if (irRemoteUp)    { m2.Set(m2s20h, m2s20b); irRemoteUp=false;  }
+  else if (irRemoteLeft)  { m2.Set(m2s21h, m2s21b); irRemoteLeft=false; }
+  else if (irRemoteRight) { m2.Set(m2s22h, m2s22b); irRemoteRight=false; }
 }
 
 

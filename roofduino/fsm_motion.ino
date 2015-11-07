@@ -17,7 +17,9 @@ the states are as follows:
 14: Return from bottom - turn left 9 to 3 o'clock
 15: Return from bottom - forward 3 o'clock (until end of roof or columnCounter*nextColEncCount
 
-
+20: Move forward one step
+21: Turn left one step
+222: Turn right one step
 
 The assumption is that the robot is placed in the lower right
 corner of the roof and is pointed up the roof.
@@ -812,4 +814,96 @@ State m2s15b()
   
   straighten_up();
 }
+
+
+// State 20 --------------------------------------------------------
+// Move forward one step
+
+State m2s20h()
+{
+  Serial.println("m2s20h - move forward one step");
+  m2_state = 20;
+  
+  // Note motor direction (for proper sign to encoder counts)
+  leftMotorForward = true;
+  rightMotorForward = true;
+  
+  // Stop motors
+  analogWrite(leftMotorForwardPin, forward_speed);
+  analogWrite(leftMotorBackwardPin, 0);
+  analogWrite(rightMotorForwardPin, forward_speed);
+  analogWrite(rightMotorBackwardPin, 0);
+}
+
+State m2s20b()
+{
+  mot_serial_print_once("m2s20b - move forward one step");
+
+  if (m2.Timeout(50)) {
+    // Go to new state: Stopped
+    m2.Set(m2s1h, m2s1b);
+    return;
+  }
+}
+
+// State 21 --------------------------------------------------------
+// Turn left one step
+
+State m2s21h()
+{
+  Serial.println("m2s21h - turn left one step");
+  m2_state = 21;
+  
+  // Note motor direction (for proper sign to encoder counts)
+  leftMotorForward = false;
+  rightMotorForward = true;
+  
+  // Stop motors
+  analogWrite(leftMotorForwardPin, 0);
+  analogWrite(leftMotorBackwardPin, forward_speed);
+  analogWrite(rightMotorForwardPin, forward_speed);
+  analogWrite(rightMotorBackwardPin, 0);
+}
+
+State m2s21b()
+{
+  mot_serial_print_once("m2s21b - turn left one step");
+
+  if (m2.Timeout(50)) {
+    // Go to new state: Stopped
+    m2.Set(m2s1h, m2s1b);
+    return;
+  }
+}
+
+// State 22 --------------------------------------------------------
+// Turn right one step
+
+State m2s22h()
+{
+  Serial.println("m2s22h - turn right one step");
+  m2_state = 22;
+  
+  // Note motor direction (for proper sign to encoder counts)
+  leftMotorForward = true;
+  rightMotorForward = false;
+  
+  // Stop motors
+  analogWrite(leftMotorForwardPin, forward_speed);
+  analogWrite(leftMotorBackwardPin, 0);
+  analogWrite(rightMotorForwardPin, 0);
+  analogWrite(rightMotorBackwardPin, forward_speed);
+}
+
+State m2s22b()
+{
+  mot_serial_print_once("m2s22b - turn right one step");
+
+  if (m2.Timeout(50)) {
+    // Go to new state: Stopped
+    m2.Set(m2s1h, m2s1b);
+    return;
+  }
+}
+
 
