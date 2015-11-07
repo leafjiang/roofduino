@@ -12,16 +12,41 @@ For all programs, the robot must be placed in the lower right
 corner of the area to be scanned.
 */
 
-// Helper variables so that each print() is executed only once
-bool once1 = true;
-bool once2 = true;
-bool once3 = true;
+boolean once1, once2, once3, once4;
 
 String lcd_prev_s="";
 void lcd_serial_print_once(String s)
 {
   if (s!=lcd_prev_s) Serial.println(s);
   lcd_prev_s = s;
+}
+
+void lcdUpdateStatus()
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(String(leftMotorCounter));
+  lcd.setCursor(8, 0);
+  lcd.print(String(rightMotorCounter));
+  lcd.setCursor(14, 0);
+  lcd.print(m2_state);
+  lcd.setCursor(0, 1);
+  lcd.print(String(adcVals[0]));
+  lcd.setCursor(9, 1);
+  lcd.print(String(adcVals[15]));
+  lcd.setCursor(7, 0);
+  if (frontObstacle) lcd.print("x");
+  else lcd.print(char(165));
+  lcd.setCursor(7, 1);
+  lcd.print(String(gyro_cal));
+  //lcd.setCursor(15,1);
+  //lcd.print(String(gyro_cal));
+  lcd.setCursor(6, 1);
+  if (irFrontLeft) lcd.print(char(165));
+  else lcd.print("x");
+  lcd.setCursor(8, 1);
+  if (irFrontRight) lcd.print(char(165));
+  else lcd.print("x");
 }
 
 // State 1 --------------------------------------------------------
@@ -82,7 +107,6 @@ State m1s2b()
 State m1s3h()
 {    
   Serial.println("m1s3h - square");
-  homeward_bound = false;
   
   lcd.clear();
   //         0123456789ABCDEF
@@ -117,7 +141,9 @@ State m1s4h()
   //         0123456789ABCDEF
   lcd.print("Roof program");
   lcd.setCursor(0, 1);
-  lcd.print("3.. ");
+  //lcd.print("3.. ");
+  lcd.print("Gyro cal: ");
+  lcd.print(gyro_cal);
   once1 = true;
   once2 = true;
   once3 = true;
@@ -126,17 +152,28 @@ State m1s4h()
 State m1s4b()
 {
   lcd_serial_print_once("m1s4b - roof count down");
-  if (m1.Timeout(2000)) m1.Set(m1s6h, m1s6b);
-  else if (m1.Timeout(1500) && once3) {
-    lcd.print("Go!");
+  if (m1.Timeout(4000)) {
+    m1.Set(m1s6h, m1s6b);
+    return;
+  } else if (m1.Timeout(3000) && once3) {
+    //lcd.print("Go!");
+    lcd.setCursor(0,1);
+    lcd.print("ADC[15]: ");
+    lcd.print(adcVals[15]);
+    lcd.print("  ");    
     once3 = false;
-  }
-  else if (m1.Timeout(1000) && once2) {
-    lcd.print("1.. ");
+  } else if (m1.Timeout(2000) && once2) {
+    //lcd.print("1.. ");
+    lcd.setCursor(0,1);
+    lcd.print("ADC[0]: ");
+    lcd.print(adcVals[0]);
+    lcd.print("  ");
     once2 = false;
-  }
-  else if (m1.Timeout(500) && once1) {
-    lcd.print("2.. ");
+  } else if (m1.Timeout(1000) && once1) {  
+    lcd.setCursor(0,1);
+    lcd.print("Front: ");
+    lcd.print(frontCm);
+    lcd.print(" cm");
     once1 = false;
   }
 }
@@ -161,16 +198,16 @@ State m1s5h()
 State m1s5b()
 {
   lcd_serial_print_once("m1s5b - square count down");
-  if (m1.Timeout(2000)) m1.Set(m1s7h, m1s7b);
-  else if (m1.Timeout(1500) && once3) {
+  if (m1.Timeout(2000)) {
+    m1.Set(m1s7h, m1s7b);
+    return;
+  } else if (m1.Timeout(1500) && once3) {
     lcd.print("Go!");
     once3 = false;
-  }
-  else if (m1.Timeout(1000) && once2) {
+  } else if (m1.Timeout(1000) && once2) {
     lcd.print("1.. ");
     once2 = false;
-  }
-  else if (m1.Timeout(500) && once1) {
+  } else if (m1.Timeout(500) && once1) {
     lcd.print("2.. ");
     once1 = false;
   }
@@ -189,14 +226,10 @@ State m1s6h()
   lcd.print("Running...");
 
   // Set global variables
-  leftMotorForward = true;
-  rightMotorForward = true;
   leftMotorCounter = 0;
   rightMotorCounter = 0;
-  at_home = false;
-  // Bounding box: Only for square mode
-  //posCounterLim = 1234567;
-  //numColumns = 123;
+  returnedHome = false;
+  emergencyStop = false;
   
   // Turn on motors (forward)
   m2.Set(m2s2h, m2s2b);  
@@ -209,88 +242,19 @@ State m1s6b()
   saveData();
   
   // Update LCD display once in a while
-  updateLcd();
+  lcdUpdateStatus();
 
-  // If returned to home, done.  goto state 1
-  if (at_home) m1.Set(m1s1h, m1s1b);
+  // If returned to home, done.  goto LCD done state
+  if (returnedHome) {
+    m1.Set(m1s9h, m1s9b);
+    return;
+  }
   
-  // If we pressed a button, done. goto state 1
+  // If we pressed a button, done. Emergency stop.
   if (buttonDown == LOW || buttonUp == LOW || buttonLeft == LOW
-       || buttonRight == LOW || buttonSelect == LOW)
-    m1.Set(m1s1h, m1s1b);
-    // TODO: bug. does not rerun header functions when re-entering states
-}
-
-void saveData()
-{
-  // make a string for assembling the data to log:
-  String dataString = "";
-
-  // read sensor values and append to the string:
-  // write adc values
-  for (int I; I<16; I++) {
-    dataString += String(adcVals[I]);
-    dataString += ",";    
+       || buttonRight == LOW || buttonSelect == LOW || emergencyStop) {
+    m1.Set(m1s8h, m1s8b); // emergency stop
   }
-  // write encoder values 
-  dataString += String(leftMotorCounter);
-  dataString += ",";
-  dataString += String(rightMotorCounter);
-  dataString += ",";
-  // write ping values
-  dataString += String(frontCm);
-  dataString += ",";
-  dataString += String(backCm);  
-  dataString += ",";
-  // write timestamp
-  dataString += millis();
-
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
-
-  // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    //Serial.println(dataString);
-  }
-  // if the file isn't open, pop up an error:
-  else {
-    Serial.println("error opening datalog.txt");
-  }
-}
-
-void updateLcd()
-{
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(String(leftMotorCounter));
-  lcd.setCursor(8, 0);
-  lcd.print(String(rightMotorCounter));
-  lcd.setCursor(15, 1);
-  if (homeward_bound) lcd.print("H");  // Going back home
-  else lcd.print("S");                 // Scanning
-  lcd.setCursor(0, 1);
-  lcd.print(String(adcVals[0]));
-  lcd.setCursor(9, 1);
-  lcd.print(String(adcVals[15]));
-  lcd.setCursor(7, 0);
-  if (frontObstacle) lcd.print("x");
-  else lcd.print(char(165));
-  lcd.setCursor(7, 1);
-  if (backRoofMissing) lcd.print("x");
-  else lcd.print(char(165));
-  lcd.setCursor(15,0);
-  if (rightMotorForward) lcd.print("F");
-  else lcd.print("B");
-  lcd.setCursor(6, 1);
-  if (irFrontLeft) lcd.print(char(165));
-  else lcd.print("x");
-  lcd.setCursor(8, 1);
-  if (irFrontRight) lcd.print(char(165));
-  else lcd.print("x");
 }
 
 // State 7 --------------------------------------------------------
@@ -299,12 +263,101 @@ void updateLcd()
 State m1s7h()
 {
   Serial.println("m1s7h - square go");
-  // Not implemented yet.  Just go back to state 1.
-  m1.Set(m1s1h, m1s1b);
+
+  lcd.clear();
+  //         0123456789ABCDEF
+  lcd.print("Roof program");
+  lcd.setCursor(0, 1);
+  lcd.print("Running...");
+  
 }
 
 State m1s7b()
 {
   lcd_serial_print_once("m1s7b - square go");
+  
+  // Update LCD display once in a while
+  lcdUpdateStatus();
+
+  // If we pressed a button, done
+  if (buttonDown == LOW || buttonUp == LOW || buttonLeft == LOW
+       || buttonRight == LOW || buttonSelect == LOW) {
+    m1.Set(m1s9h, m1s9b); // done
+  }
 }
+
+
+// State 8 --------------------------------------------------------
+// Error or emergency stop
+
+State m1s8h()
+{
+  Serial.println("m1s8h - error");
+
+  once1 = true;
+  once2 = true;
+  once3 = true;
+  once4 = true;
+}
+
+State m1s8b()
+{
+  lcd_serial_print_once("m1s8b - error");
+
+  if (m1.Timeout(6000)) {
+    m1.Set(m1s9h, m1s9b);
+    return;
+  } else if (m1.Timeout(5000) && once4) {
+    //lcd.print("Go!");
+    lcd.setCursor(0,1);
+    lcd.print("ADC[15]: ");
+    lcd.print(adcVals[15]);
+    lcd.print("  ");    
+    once4 = false;
+  } else if (m1.Timeout(4000) && once3) {
+    //lcd.print("1.. ");
+    lcd.setCursor(0,1);
+    lcd.print("ADC[0]: ");
+    lcd.print(adcVals[0]);
+    lcd.print("  ");
+    once3 = false;
+  } else if (m1.Timeout(3000) && once2) {  
+    lcd.setCursor(0,1);
+    lcd.print("Front: ");
+    lcd.print(frontCm);
+    lcd.print(" cm");
+    once2 = false;
+  } else if (m1.Timeout(2000) && once1) {  
+    lcd.clear();
+    //         0123456789ABCDEF
+    lcd.print("Emergency stop");
+    lcd.setCursor(0, 1);
+    lcd.print("Gyro cal: ");
+    lcd.print(gyro_cal);
+    once1 = false;
+  }
+}
+
+
+// State 9 --------------------------------------------------------
+// Done
+
+State m1s9h()
+{
+  Serial.println("m1s9h - done");
+
+  lcd.clear();
+  //         0123456789ABCDEF
+  lcd.print("Program done");
+  lcd.setCursor(0, 1);
+  lcd.print("Resetting...");
+}
+
+State m1s9b()
+{
+  lcd_serial_print_once("m1s9b - done");
+
+  if (m1.Timeout(3000)) m1.Set(m1s1h, m1s1b);
+}
+
 
