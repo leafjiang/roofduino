@@ -41,7 +41,8 @@ int backRoofMissingCount = 0; // Must detect missing roof a few times before del
 // Sharp sensor.  Height measurement
 const int adcPins[16] = {A0, A1, A2, A3, A4, A5, A6, A7, A8, A9,
                          A10, A11, A12, A13, A14, A15};
-const float alpha = 0.0952; // 20-period EMA.  http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages
+//const float alpha = 0.0952; // 20-period EMA.  http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages
+const float alpha = 1; // No averaging
 float adcVals[16];  // Smoothed ADC values (10 bit ADC: 0..1023)
 boolean frontRoofMissing = false;
 int frontRoofMissingCount = 0; // Must detect missing roof a few times before delaring a missing roof
@@ -86,7 +87,7 @@ const int nextColEncCount = 50; // Number of enocder counts to move forward to n
 boolean returnedHome = false;
 boolean emergencyStop = false;
 // Forward and turning speeds: 0..255
-int forward_speed = 255;
+int forward_speed = 125;
 int turning_speed = 200;
 
 
@@ -269,6 +270,17 @@ void setup() {
   analogWrite(rightMotorBackwardPin, 0);
 
 
+  // Setup liquid crystal
+  lcd.begin(16,2);
+  lcd.print("Wowbot says,");
+  lcd.setCursor(0,1);
+  lcd.print("Hello world!");   
+
+  // Debug: stop program here
+  //Serial.print("stopped");
+  //while(1);
+
+
   // Initialize 9 DOF sensor
   if(!bno.begin()) {
     // There was a problem detecting the BNO055 ... check your connections
@@ -286,16 +298,7 @@ void setup() {
   Serial.println(" C");
   Serial.println("");
 
-  // Setup liquid crystal
-  lcd.begin(16,2);
-  lcd.print("Wowbot says,");
-  lcd.setCursor(0,1);
-  lcd.print("Hello world!");   
-
-  // Debug: stop program here
-  //Serial.print("stopped");
-  //while(1);
-
+  
   // Setup SD card
   Serial.print("Initializing SD card...");
   // see if the card is present and can be initialized:
@@ -324,7 +327,7 @@ unsigned long loop_start;
 
 void loop() {
 
-  //loop_start = millis();
+  loop_start = millis();
 
   get_sensors();             // Read all sensors, like proximity, etc...
   EXEC(m1);                  // Execute the State Machine: LCD
@@ -334,13 +337,14 @@ void loop() {
   //get_serial();              // Grab commands from Serial 
 
   // Benchmark loop duration:
-  //Serial.print("loop duration (ms): ");
-  //Serial.println(millis()-loop_start);
+  Serial.print("loop duration (ms): ");
+  Serial.println(millis()-loop_start);
   // 10 ms: before roof program
   // 83 ms: while running roof program
   // 77 ms:   minus 9 DOF sensor reading
   // 80 ms:   minus PING sensor reading
   // 20 ms:   minus saveData to SD card
+  // 700 ms: Happens when the ping sensor is unplugged (times out waiting for echo)
 }
 
 
@@ -377,7 +381,8 @@ void get_sensors()
   */
 
   // Get ultrasonic ranger values
-  frontCm = get_ultrasound(frontTrigPin, frontEchoPin);
+  // If unplugged, comment out, otherwise will wait 700 ms for return!
+  //frontCm = get_ultrasound(frontTrigPin, frontEchoPin);
   //backCm = get_ultrasound(backTrigPin, backEchoPin);
 
   // Front obstacle detection
