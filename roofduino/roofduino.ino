@@ -87,7 +87,7 @@ const int nextColEncCount = 50; // Number of enocder counts to move forward to n
 boolean returnedHome = false;
 boolean emergencyStop = false;
 // Forward and turning speeds: 0..255
-int forward_speed = 125;
+int forward_speed = 100;  // 125
 int turning_speed = 200;
 
 
@@ -242,6 +242,9 @@ void setup() {
   pinMode(buttonSelectPin, INPUT_PULLUP);
   debouncerSelect.attach(buttonSelectPin);
   debouncerSelect.interval(5); // interval in ms
+
+  // Set up analog reference voltage
+  analogReference(INTERNAL2V56);
   
   // Setup IR proximity pins
   pinMode(irFrontRightPin, INPUT);
@@ -313,38 +316,39 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(irRemotePin), isr_ir_remote, 
                   CHANGE);    
 
-  /*
+  
   // Debug: motor test
-  analogWrite(leftMotorForwardPin, 0);
-  analogWrite(leftMotorBackwardPin, 250);
-  analogWrite(rightMotorForwardPin, 250);
+  /*
+  analogWrite(leftMotorForwardPin, 255);
+  analogWrite(leftMotorBackwardPin, 0);
+  analogWrite(rightMotorForwardPin, 255);
   analogWrite(rightMotorBackwardPin, 0);  
   */
-  
 }
 
 unsigned long loop_start;
 
 void loop() {
 
-  loop_start = millis();
+  //loop_start = millis();
 
   get_sensors();             // Read all sensors, like proximity, etc...
   EXEC(m1);                  // Execute the State Machine: LCD
   EXEC(m2);                  // Motion  
 
   //provide_feedback();        // Send status updates via Serial
-  //get_serial();              // Grab commands from Serial 
+  get_serial();              // Grab commands from Serial 
 
   // Benchmark loop duration:
-  Serial.print("loop duration (ms): ");
-  Serial.println(millis()-loop_start);
+  //Serial.print("loop duration (ms): ");
+  //Serial.println(millis()-loop_start);
   // 10 ms: before roof program
   // 83 ms: while running roof program
   // 77 ms:   minus 9 DOF sensor reading
   // 80 ms:   minus PING sensor reading
   // 20 ms:   minus saveData to SD card
-  // 700 ms: Happens when the ping sensor is unplugged (times out waiting for echo)
+  // 700 ms: Happens when the ping sensor is unplugged (times out waiting for echo) 
+  
 }
 
 
@@ -577,7 +581,7 @@ void get_sensors()
 }
 
 void saveData()
-{
+{  
   // make a string for assembling the data to log:
   String dataString = "";
 
@@ -641,5 +645,25 @@ void saveData()
   else {
     Serial.println("error opening datalog.txt");
   }
+}
+
+void get_serial()
+{
+  // Get serial commands from the serial port
+  // Serial1.read() 
+  // Serial2.read() 
+  // Serial3.read()
+
+  int incomingByte = 0;   // for incoming serial data
+
+  // send data only when you receive data:
+  if (Serial.available() > 0) {
+          // read the incoming byte:
+          incomingByte = Serial.read();
+
+          // say what you got:
+          Serial.print("I received: ");
+          Serial.println(incomingByte, DEC);
+  } 
 }
 
