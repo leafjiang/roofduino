@@ -154,6 +154,20 @@ LiquidCrystal lcd(22, 23, 24, 25, 26, 27);
 #include <SD.h>
 const int chipSelectPin = 53;
 
+// RAM
+// ICSP pinout: https://www.arduino.cc/en/Reference/SPI
+// MOSI - ICSP-4
+// MISO - ICSP-1
+// SCK  - ICSP-3 - 5 MHz measured on scope
+//#include <SPI.h>
+#include <sram.h>
+#include <HardwareSerial.h>
+const int sramSelectPin = 6;
+SRAM ram(sramSelectPin);
+ram.setMode
+uint16_t addr = 0;
+uint8_t value = 0x0A;
+uint8_t res = 0;
 
 // IR remote
 // Interrupt on pin 3
@@ -312,6 +326,9 @@ void setup() {
   }
   Serial.println("card initialized.");  
 
+  // SRAM
+  ram.begin();
+
   // IR remote
   attachInterrupt(digitalPinToInterrupt(irRemotePin), isr_ir_remote, 
                   CHANGE);    
@@ -338,6 +355,16 @@ void loop() {
 
   //provide_feedback();        // Send status updates via Serial
   get_serial();              // Grab commands from Serial 
+
+  // Debug SRAM
+  // Measure time on osscilloscope
+  // Duration of writeByte = duration of readByte = 14.6 us
+  // or write speed of 68.4 kB/s
+  // Time to fill 1 Mbit memory = 1.83 seconds (too slow)
+  // Need to use serial write/read mode
+  ram.writeByte(13, 8);  // Write address
+  res = ram.readByte(13);    // Read address
+  Serial.println(res, HEX);
 
   // Benchmark loop duration:
   //Serial.print("loop duration (ms): ");

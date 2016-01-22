@@ -24,3 +24,7 @@ Serial port
 * Set baud in serial monitor to 115200 baud
 
 To install latest Arduino on Ubuntu 14.04, follow [these instructions](http://ubuntuhandbook.org/index.php/2015/11/install-arduino-ide-1-6-6-ubuntu/).
+
+Install SRAM library through Sketch -> Include Library -> Mange Libraries
+Select SRAM by panStamp v. 1.0.1
+Installed into `~/Documents/Arduino/libraries`
